@@ -5,8 +5,7 @@ import {
   GoogleAuthProvider,
   signOut,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../config/firebase';
+import { auth } from '../config/firebase';
 
 const AuthContext = createContext(null);
 
@@ -15,50 +14,34 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Create user document in Firestore if it doesn't exist yet
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const snap = await getDoc(userRef);
-        if (!snap.exists()) {
-          await setDoc(userRef, {
-            displayName: firebaseUser.displayName,
-            email: firebaseUser.email,
-            photoURL: firebaseUser.photoURL,
-            points: 0,
-            badges: [],
-            reportCount: 0,
-            verifyCount: 0,
-            createdAt: serverTimestamp(),
-          });
-        }
-        setUser(firebaseUser);
-      } else {
-        setUser(null);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser ?? null);
       setLoading(false);
     });
     return unsubscribe;
   }, []);
 
-const signInWithGoogle = async () => {
-  if (loading) return;
-  try {
+  const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  } catch (err) {
-    if (err.code !== 'auth/cancelled-popup-request' && 
-        err.code !== 'auth/popup-closed-by-user') {
-      console.error('Auth error:', err);
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      // Ignore user-cancelled popups
+      if (
+        err.code !== 'auth/cancelled-popup-request' &&
+        err.code !== 'auth/popup-closed-by-user'
+      ) {
+        console.error('Google sign-in error:', err.code, err.message);
+        throw err; // re-throw so caller can show error if needed
+      }
     }
-  }
-};
+  };
 
   const logout = () => signOut(auth);
 
   return (
     <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

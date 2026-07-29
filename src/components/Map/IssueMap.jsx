@@ -1,88 +1,75 @@
-import { useEffect, useRef, useState } from 'react';
-import { loadGoogleMaps, SURAT_CENTER, CATEGORY_COLORS } from '../../services/maps';
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import { INDIA_CENTER, CATEGORY_COLORS } from '../../services/maps';
 
-export default function IssueMap({ issues, selectedIssue, onIssueClick }) {
-  const mapDivRef = useRef(null);
-  const mapRef = useRef(null);
-  const markersRef = useRef({}); // { [issueId]: marker }
-  const [ready, setReady] = useState(false);
-
-  // Load Google Maps once
+// Helper component: pans the map when selected center/issue changes
+function MapPanner({ selectedIssue, activeCity }) {
+  const map = useMap();
+  
   useEffect(() => {
-    loadGoogleMaps().then(() => {
-      if (!mapDivRef.current || mapRef.current) return;
-
-      mapRef.current = new window.google.maps.Map(mapDivRef.current, {
-        center: SURAT_CENTER,
-        zoom: 13,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        zoomControlOptions: {
-          position: window.google.maps.ControlPosition.RIGHT_BOTTOM,
-        },
-      });
-
-      setReady(true);
-    });
-  }, []);
-
-  // Sync markers whenever issues array changes
-  useEffect(() => {
-    if (!ready || !mapRef.current) return;
-
-    const currentIds = new Set(issues.map((i) => i.id));
-
-    // Remove markers for issues that no longer exist
-    Object.keys(markersRef.current).forEach((id) => {
-      if (!currentIds.has(id)) {
-        markersRef.current[id].setMap(null);
-        delete markersRef.current[id];
-      }
-    });
-
-    // Add or update markers
-    issues.forEach((issue) => {
-      if (!issue.lat || !issue.lng) return;
-
-      const position = { lat: issue.lat, lng: issue.lng };
-      const color = CATEGORY_COLORS[issue.category] || '#888780';
-      const isSelected = selectedIssue?.id === issue.id;
-
-      const icon = {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        scale: isSelected ? 14 : 10,
-        fillColor: color,
-        fillOpacity: 1,
-        strokeColor: isSelected ? '#fff' : 'rgba(255,255,255,0.8)',
-        strokeWeight: isSelected ? 3 : 2,
-      };
-
-      if (markersRef.current[issue.id]) {
-        // Update existing marker
-        markersRef.current[issue.id].setIcon(icon);
-      } else {
-        // Create new marker
-        const marker = new window.google.maps.Marker({
-          position,
-          map: mapRef.current,
-          title: issue.title,
-          icon,
-        });
-
-        marker.addListener('click', () => onIssueClick(issue));
-        markersRef.current[issue.id] = marker;
-      }
-    });
-  }, [issues, selectedIssue, ready]);
-
-  // Pan to selected issue
-  useEffect(() => {
-    if (!ready || !selectedIssue || !mapRef.current) return;
-    if (selectedIssue.lat && selectedIssue.lng) {
-      mapRef.current.panTo({ lat: selectedIssue.lat, lng: selectedIssue.lng });
+    if (selectedIssue?.lat && selectedIssue?.lng) {
+      map.flyTo([selectedIssue.lat, selectedIssue.lng], 14, { duration: 1.2 });
     }
-  }, [selectedIssue, ready]);
+  }, [selectedIssue, map]);
 
-  return <div ref={mapDivRef} style={{ width: '100%', height: '100%' }} />;
+  useEffect(() => {
+    if (activeCity) {
+      map.flyTo([activeCity.lat, activeCity.lng], activeCity.zoom || 11, { duration: 1.5 });
+    }
+  }, [activeCity, map]);
+
+  return null;
+}
+
+export default function IssueMap({ issues, selectedIssue, activeCity, onIssueClick }) {
+  return (
+    <MapContainer
+      center={[INDIA_CENTER.lat, INDIA_CENTER.lng]}
+      zoom={INDIA_CENTER.zoom}
+      style={{ width: '100%', height: '100%' }}
+      zoomControl={true}
+    >
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+
+      <MapPanner selectedIssue={selectedIssue} activeCity={activeCity} />
+
+      {issues.map((issue) => {
+        if (!issue.lat || !issue.lng) return null;
+        const color = CATEGORY_COLORS[issue.category] || '#888780';
+        const isSelected = selectedIssue?.id === issue.id;
+
+        return (
+          <CircleMarker
+            key={issue.id}
+            center={[issue.lat, issue.lng]}
+            radius={isSelected ? 14 : 9}
+            pathOptions={{
+              fillColor: color,
+              fillOpacity: 0.9,
+              color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.8)',
+              weight: isSelected ? 3 : 1.5,
+            }}
+            eventHandlers={{
+              click: () => onIssueClick(issue),
+            }}
+          >
+            <Popup>
+              <div style={{ padding: '2px 0' }}>
+                <strong style={{ fontSize: 13, color: '#111' }}>{issue.title}</strong>
+                {issue.address && (
+                  <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                    📍 {issue.address}
+                  </div>
+                )}
+              </div>
+            </Popup>
+          </CircleMarker>
+        );
+      })}
+    </MapContainer>
+  );
 }

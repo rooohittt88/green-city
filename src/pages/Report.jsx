@@ -7,9 +7,9 @@ export default function Report() {
   return (
     <div className="page">
       <div className="form-page">
-        <h1>Report an Issue</h1>
+        <h1>📷 Report an Issue</h1>
         <p className="subtitle">
-          Take a photo of a civic problem. AI will analyze it automatically.
+          Take a photo of a civic problem in your area. Our AI will analyze it and file a report on the nation-wide map.
         </p>
         <ReportForm onSuccess={() => navigate('/')} />
       </div>
