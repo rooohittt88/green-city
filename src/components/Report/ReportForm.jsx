@@ -69,16 +69,16 @@ export default function ReportForm({ onSuccess }) {
       setAddress(addr);
     } else {
       // Geocoding failed — set a meaningful fallback instead of coordinates
-      setAddress('Surat, Gujarat, India');
+      setAddress('New Delhi, India');
       console.warn('Geocoding failed, using fallback address');
     }
     setGettingLocation(false);
   },
       (err) => {
         console.warn('Geolocation denied:', err.message);
-        // Fallback to Surat centre — the demo still works
-        setLocation({ lat: 21.1702, lng: 72.8311 });
-        setAddress('Surat, Gujarat, India');
+        // Fallback to New Delhi center
+        setLocation({ lat: 28.6139, lng: 77.2090 });
+        setAddress('New Delhi, India');
         setGettingLocation(false);
       },
       { timeout: 10000 }

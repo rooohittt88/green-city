@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useIssues } from '../hooks/useIssues';
 import { generateInsights } from '../services/gemini';
@@ -9,9 +9,9 @@ import { CATEGORY_LABELS, CATEGORY_COLORS } from '../services/maps';
 
 const STATUS_COLORS = {
   reported: '#9CA3AF',
-  verified: '#1D9E75',
-  in_progress: '#EF9F27',
-  resolved: '#0F6E56',
+  verified: '#10b981',
+  in_progress: '#f59e0b',
+  resolved: '#059669',
 };
 
 export default function Dashboard() {
@@ -23,8 +23,9 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-center">
-          <span className="spinner" /> Loading dashboard…
+        <div className="loading-center" style={{ minHeight: '60vh' }}>
+          <span className="spinner" style={{ width: 28, height: 28 }} />
+          <p>Loading Pan-India Impact Dashboard…</p>
         </div>
       </div>
     );
@@ -59,10 +60,10 @@ export default function Dashboard() {
     fill: STATUS_COLORS[status] || '#888',
   }));
 
-  // Ward breakdown
+  // Ward/Region breakdown
   const wardCounts = {};
   issues.forEach((i) => {
-    const w = i.wardName || 'Unknown';
+    const w = i.wardName || 'India';
     wardCounts[w] = (wardCounts[w] || 0) + 1;
   });
   const wardData = Object.entries(wardCounts)
@@ -87,7 +88,7 @@ export default function Dashboard() {
       const result = await generateInsights(summary);
       setInsights(result);
     } catch (e) {
-      setInsightError('Failed to generate insights. Check Gemini API key.');
+      setInsightError('Failed to generate insights. Check Gemini API key in .env');
     } finally {
       setLoadingInsights(false);
     }
@@ -98,13 +99,18 @@ export default function Dashboard() {
   return (
     <div className="page">
       <div className="dashboard-page">
-        <h1>Impact Dashboard</h1>
+        <div style={{ marginBottom: 24 }}>
+          <h1>🇮🇳 Nationwide Impact Dashboard</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+            Real-time analytics and community-driven action metrics across India.
+          </p>
+        </div>
 
         {/* Stat cards */}
         <div className="stat-grid">
           <div className="stat-card">
             <div className="stat-value">{total}</div>
-            <div className="stat-label">Total Issues Reported</div>
+            <div className="stat-label">Total Reports Filed</div>
           </div>
           <div className="stat-card">
             <div className="stat-value" style={{ color: 'var(--primary)' }}>{verified}</div>
@@ -112,19 +118,19 @@ export default function Dashboard() {
           </div>
           <div className="stat-card">
             <div className="stat-value" style={{ color: 'var(--primary-dark)' }}>{resolved}</div>
-            <div className="stat-label">Resolved</div>
+            <div className="stat-label">Successfully Resolved</div>
           </div>
           <div className="stat-card">
             <div className="stat-value" style={{ color: 'var(--danger)' }}>{critical}</div>
-            <div className="stat-label">Critical Issues</div>
+            <div className="stat-label">Critical Priority (Severity 4+)</div>
           </div>
         </div>
 
         {/* Charts row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20, marginBottom: 20 }}>
           <div className="chart-card">
             <p className="section-title">Issues by Category</p>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
                   data={catData}
@@ -140,18 +146,18 @@ export default function Dashboard() {
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--text)' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
 
           <div className="chart-card">
             <p className="section-title">Issues by Status</p>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={statusData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <XAxis dataKey="status" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={statusData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+                <XAxis dataKey="status" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+                <Tooltip contentStyle={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--text)' }} />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {statusData.map((entry, i) => (
                     <Cell key={i} fill={entry.fill} />
@@ -162,14 +168,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Ward breakdown */}
+        {/* Region breakdown */}
         <div className="chart-card" style={{ marginBottom: 20 }}>
-          <p className="section-title">Issues by Ward</p>
-          <ResponsiveContainer width="100%" height={180}>
+          <p className="section-title">Top Active Cities & Wards</p>
+          <ResponsiveContainer width="100%" height={200}>
             <BarChart data={wardData} layout="vertical" margin={{ top: 0, right: 20, left: 40, bottom: 0 }}>
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="ward" tick={{ fontSize: 11 }} width={80} />
-              <Tooltip />
+              <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+              <YAxis type="category" dataKey="ward" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} width={100} />
+              <Tooltip contentStyle={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--text)' }} />
               <Bar dataKey="count" fill="var(--primary)" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -177,8 +183,8 @@ export default function Dashboard() {
 
         {/* AI Insights */}
         <div className="chart-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <p className="section-title" style={{ marginBottom: 0 }}>🤖 AI-Generated Insights</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+            <p className="section-title" style={{ marginBottom: 0 }}>🤖 AI-Powered Urban Insights</p>
             <button
               className="btn btn-outline btn-sm"
               onClick={handleLoadInsights}
@@ -186,7 +192,7 @@ export default function Dashboard() {
             >
               {loadingInsights
                 ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Generating…</>
-                : insights.length ? '↻ Refresh' : 'Generate Insights'
+                : insights.length ? '↻ Refresh AI Analysis' : 'Generate Pan-India Insights'
               }
             </button>
           </div>
@@ -196,13 +202,19 @@ export default function Dashboard() {
           {insights.length > 0 ? (
             <ul className="insights-list">
               {insights.map((insight, i) => (
-                <li key={i} className="insight-item">{insight}</li>
+                <li
+                  key={i}
+                  className="insight-item"
+                  style={{ animationDelay: `${i * 0.07}s` }}
+                >
+                  {insight}
+                </li>
               ))}
             </ul>
           ) : (
             !loadingInsights && (
               <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-                Click "Generate Insights" to let the AI analyze your data and surface patterns.
+                Click "Generate Pan-India Insights" to analyze nationwide report clusters using AI.
               </p>
             )
           )}

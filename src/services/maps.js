@@ -1,24 +1,20 @@
-// DELETE this line
-import { Loader } from '@googlemaps/js-api-loader';
+// Pan-India Map Center & City Presets
+export const INDIA_CENTER = { lat: 20.5937, lng: 78.9629, zoom: 5 };
 
-// Singleton promise — maps only loads once
-let _mapsPromise = null;
+export const CITY_PRESETS = [
+  { name: 'All India', lat: 20.5937, lng: 78.9629, zoom: 5 },
+  { name: 'New Delhi', lat: 28.6139, lng: 77.2090, zoom: 11 },
+  { name: 'Mumbai', lat: 19.0760, lng: 72.8777, zoom: 11 },
+  { name: 'Bengaluru', lat: 12.9716, lng: 77.5946, zoom: 11 },
+  { name: 'Surat', lat: 21.1702, lng: 72.8311, zoom: 12 },
+  { name: 'Hyderabad', lat: 17.3850, lng: 78.4867, zoom: 11 },
+  { name: 'Chennai', lat: 13.0827, lng: 80.2707, zoom: 11 },
+  { name: 'Kolkata', lat: 22.5726, lng: 88.3639, zoom: 11 },
+  { name: 'Pune', lat: 18.5204, lng: 73.8567, zoom: 11 },
+  { name: 'Jaipur', lat: 26.9124, lng: 75.7873, zoom: 11 },
+];
 
-export async function loadGoogleMaps() {
-  if (window.google?.maps) return;
-  
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=visualization`;
-    script.async = true;
-    script.defer = true;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
-// Centre of Surat city
+// Deprecated fallback alias for backward compatibility
 export const SURAT_CENTER = { lat: 21.1702, lng: 72.8311 };
 
 // Marker fill colours by category
@@ -46,39 +42,40 @@ export const STATUS_LABELS = {
   resolved: 'Resolved',
 };
 
-// Calls Google Geocoding REST API, returns human address string
+// Calls OpenStreetMap Nominatim API — free, no API key required
 export async function reverseGeocode(lat, lng) {
-  const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}`;
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        'Accept-Language': 'en',
+        'User-Agent': 'CommunityHero-India/1.0',
+      },
+    });
     const data = await res.json();
 
-    if (data.status !== 'OK') {
-      console.warn('Geocoding API returned status:', data.status, data.error_message || '');
-      return null; // return null so caller knows it failed
-    }
-
-    if (data.results && data.results[0]) {
-      return data.results[0].formatted_address;
+    if (data && data.display_name) {
+      return data.display_name;
     }
 
     return null;
   } catch (e) {
-    console.error('Geocoding fetch error:', e);
+    console.error('Reverse geocoding fetch error:', e);
     return null;
   }
 }
 
-// Extracts a ward/neighbourhood name from a full formatted address
-// "Adajan Patiya, Adajan, Surat, Gujarat 395009, India" → "Adajan"
+// Extracts a ward/city/neighbourhood name from a full formatted address across India
 export function extractWard(address) {
-  if (!address) return 'Surat';
-  // If it looks like coordinates (contains a dot and comma with numbers), return default
-  if (/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(address.trim())) return 'Surat';
-  const parts = address.split(',');
-  // Second part is usually the neighbourhood/ward in Indian addresses
-  const ward = parts[1]?.trim() || parts[0]?.trim() || 'Surat';
-  return ward;
+  if (!address) return 'India';
+  // If it looks like raw coordinates, return default
+  if (/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(address.trim())) return 'India';
+  
+  const parts = address.split(',').map((p) => p.trim());
+  if (parts.length >= 3) {
+    // Usually parts[0] or parts[1] is locality/city in Indian addresses
+    return parts[1] || parts[0];
+  }
+  return parts[0] || 'India';
 }

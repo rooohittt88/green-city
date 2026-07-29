@@ -2,111 +2,151 @@ import { useState } from 'react';
 import IssueMap from '../components/Map/IssueMap';
 import IssueDetailModal from '../components/Issue/IssueDetailModal';
 import { useIssues } from '../hooks/useIssues';
-import { CATEGORY_LABELS, STATUS_LABELS, CATEGORY_COLORS } from '../services/maps';
-// import { seedDatabase } from '../utils/seed';
+import { CATEGORY_LABELS, STATUS_LABELS, CATEGORY_COLORS, CITY_PRESETS } from '../services/maps';
 
-const STATUS_ORDER = ['reported', 'verified', 'in_progress', 'resolved'];
+const STATUS_DOT = {
+  reported: '#9ca3af',
+  verified: '#10b981',
+  in_progress: '#f59e0b',
+  resolved: '#059669',
+};
+
+const FILTER_CATEGORIES = [
+  { key: 'all', label: 'All' },
+  { key: 'pothole', label: '🕳 Pothole' },
+  { key: 'water_leak', label: '💧 Water Leak' },
+  { key: 'streetlight', label: '💡 Light' },
+  { key: 'waste', label: '🗑 Waste' },
+  { key: 'other', label: 'Other' },
+];
 
 export default function Home() {
   const { issues, loading } = useIssues();
-  const [selectedIssue, setSelectedIssue] = useState(null);
-  const [filter, setFilter] = useState('all'); // all | pothole | water_leak | streetlight | waste | other
+  const [selected, setSelected] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const [activeCity, setActiveCity] = useState(CITY_PRESETS[0]);
 
   const filtered = filter === 'all'
     ? issues
     : issues.filter((i) => i.category === filter);
 
-  const handleIssueClick = (issue) => setSelectedIssue(issue);
-
   return (
     <div className="page">
-        {/* {import.meta.env.DEV && (
-  <button
-    onClick={seedDatabase}
-    style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 999,
-      background: '#111', color: '#fff', padding: '8px 14px',
-      borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12 }}
-  >
-    🌱 Seed DB (click once)
-  </button>
-)} */}
       <div className="map-layout">
         {/* ── Sidebar ── */}
         <aside className="sidebar">
+          {/* Header */}
           <div className="sidebar-header">
-            <h3>Issues</h3>
-            <span className="sidebar-count">{filtered.length}</span>
+            <h3>🇮🇳 Issues Across India</h3>
+            <span className="sidebar-count">
+              {loading ? '…' : filtered.length} report{filtered.length !== 1 ? 's' : ''}
+            </span>
           </div>
 
-          {/* Category filter tabs */}
-          <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {['all', 'pothole', 'water_leak', 'streetlight', 'waste', 'other'].map((cat) => (
+          {/* City Chips */}
+          <div className="city-chips-bar">
+            {CITY_PRESETS.map((city) => (
               <button
-                key={cat}
-                onClick={() => setFilter(cat)}
-                style={{
-                  padding: '3px 8px', borderRadius: 99, border: 'none',
-                  fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-                  background: filter === cat ? CATEGORY_COLORS[cat] || 'var(--text)' : 'var(--bg)',
-                  color: filter === cat ? '#fff' : 'var(--text-muted)',
-                  fontWeight: filter === cat ? 600 : 400,
-                }}
+                key={city.name}
+                className={`city-chip${activeCity.name === city.name ? ' active' : ''}`}
+                onClick={() => { setActiveCity(city); setSelected(null); }}
               >
-                {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
+                {city.name === 'All India' ? '🇮🇳 All' : city.name}
               </button>
             ))}
           </div>
 
-          {/* Issue list */}
-          {loading ? (
-            <div className="loading-center">
-              <span className="spinner" />
-              Loading issues…
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="empty-state">
-              <div style={{ fontSize: 32 }}>📭</div>
-              <p>No issues yet. Be the first to report one!</p>
-            </div>
-          ) : (
-            filtered.map((issue) => (
-              <div
-                key={issue.id}
-                className={`issue-card${selectedIssue?.id === issue.id ? ' selected' : ''}`}
-                onClick={() => handleIssueClick(issue)}
+          {/* Category Filter */}
+          <div className="category-filter-bar">
+            {FILTER_CATEGORIES.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                style={{
+                  padding: '4px 11px', borderRadius: 99,
+                  border: '1.5px solid',
+                  borderColor: filter === key
+                    ? (CATEGORY_COLORS[key] || 'var(--primary)')
+                    : 'var(--border)',
+                  background: filter === key
+                    ? (CATEGORY_COLORS[key] || 'var(--primary)')
+                    : 'var(--card)',
+                  color: filter === key ? '#fff' : 'var(--text-muted)',
+                  fontSize: 11.5, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'all 0.18s ease',
+                  flexShrink: 0,
+                }}
               >
-                <div className="issue-card-title">{issue.title}</div>
-                <div className="issue-card-addr">{issue.address}</div>
-                <div className="issue-card-meta">
-                  <span className={`badge badge-${issue.category}`}>
-                    {CATEGORY_LABELS[issue.category]}
-                  </span>
-                  <span className="status-dot" style={{ background: { reported: '#9CA3AF', verified: '#1D9E75', in_progress: '#EF9F27', resolved: '#0F6E56' }[issue.status] }} />
-                  <span className="status-label">{STATUS_LABELS[issue.status]}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>
-                    ▲ {issue.votes || 0}
-                  </span>
-                </div>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Issue List */}
+          <div className="issue-list">
+            {loading ? (
+              <div className="loading-center">
+                <span className="spinner" style={{ width: 24, height: 24 }} />
+                <p>Loading community reports…</p>
               </div>
-            ))
-          )}
+            ) : filtered.length === 0 ? (
+              <div className="empty-state">
+                <span style={{ fontSize: 40 }}>📭</span>
+                <p style={{ fontWeight: 700 }}>No reports found</p>
+                <p style={{ fontSize: 12, color: 'var(--text-subtle)' }}>
+                  Be the first to report an issue in your city!
+                </p>
+              </div>
+            ) : (
+              filtered.map((issue, i) => (
+                <div
+                  key={issue.id}
+                  className={`issue-card${selected?.id === issue.id ? ' selected' : ''}`}
+                  onClick={() => setSelected(issue)}
+                  style={{ animationDelay: `${Math.min(i * 0.04, 0.4)}s` }}
+                >
+                  <div className="issue-card-title">{issue.title}</div>
+                  <div className="issue-card-addr">📍 {issue.address || 'India'}</div>
+                  <div className="issue-card-meta">
+                    <span className={`badge badge-${issue.category}`}>
+                      {CATEGORY_LABELS[issue.category]}
+                    </span>
+                    <span
+                      className="status-dot"
+                      style={{ background: STATUS_DOT[issue.status] || '#9ca3af' }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+                      {STATUS_LABELS[issue.status]}
+                    </span>
+                    <span style={{
+                      marginLeft: 'auto', fontSize: 11.5,
+                      color: 'var(--primary)', fontWeight: 800,
+                    }}>
+                      ▲ {issue.votes || 0}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </aside>
 
         {/* ── Map ── */}
         <main className="map-container">
           <IssueMap
             issues={filtered}
-            selectedIssue={selectedIssue}
-            onIssueClick={handleIssueClick}
+            selectedIssue={selected}
+            activeCity={activeCity}
+            onIssueClick={setSelected}
           />
         </main>
       </div>
 
-      {/* Issue detail modal */}
-      {selectedIssue && (
+      {selected && (
         <IssueDetailModal
-          issue={selectedIssue}
-          onClose={() => setSelectedIssue(null)}
+          issue={selected}
+          onClose={() => setSelected(null)}
         />
       )}
     </div>
