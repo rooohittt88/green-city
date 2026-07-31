@@ -5,7 +5,7 @@ export async function uploadIssuePhoto(file, userId) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);
-  formData.append('folder', 'community-hero/issues');
+  formData.append('folder', 'green-city/issues');
   formData.append('public_id', `${userId}_${Date.now()}`);
 
   const res = await fetch(

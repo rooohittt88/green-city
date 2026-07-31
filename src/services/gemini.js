@@ -1,10 +1,9 @@
-const GEMINI_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent`;
+const GEMINI_URL = '/api/gemini';
 
 // Takes a base64 string (without the data:image/...;base64, prefix) and mime type
 // Returns parsed JSON analysis object
 export async function analyzeIssuePhoto(base64Data, mimeType = 'image/jpeg') {
-  const prompt = `You are a civic infrastructure AI assistant for the city of Surat, India.
+  const prompt = `You are a civic infrastructure AI assistant for the cities of India.
 Analyze this image and determine if it shows a civic/infrastructure problem.
 
 Return ONLY a valid JSON object — no markdown fences, no explanation, just the raw JSON:
@@ -47,7 +46,7 @@ Rules:
 
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json','x-goog-api-key': GEMINI_KEY },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
@@ -71,11 +70,11 @@ Rules:
 
 // Generates 3 insight strings from a summary object
 export async function generateInsights(summary) {
-  const prompt = `You are a civic analytics AI for the city of Surat, India.
+  const prompt = `You are a civic analytics AI for the cities of India.
 
 Data: ${JSON.stringify(summary)}
 
-Generate exactly 3 insight sentences about civic issue patterns in Surat.
+Generate exactly 3 insight sentences about civic issue patterns in Indian cities.
 Be specific — mention numbers, ward names, or trends.
 
 Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation:
@@ -88,7 +87,7 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation:
 
   const res = await fetch(GEMINI_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json','x-goog-api-key': GEMINI_KEY},
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
 
